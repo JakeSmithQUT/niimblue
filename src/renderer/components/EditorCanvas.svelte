@@ -8,7 +8,8 @@
   import type { SceneNode, TextNode } from "$lib/engine/types";
   import Toolbar from "./Toolbar.svelte";
   import { setLabelSize } from "$lib/label";
-  import { PAPER_TEMPLATES } from "$lib/paper";
+  import { PAPER_TEMPLATES, PAPER_FAMILIES, filterTemplatesForPrinter } from "$lib/paper";
+  import { printerMeta, connectionState } from "$lib/printer";
 
   let { onPrint }: { onPrint: () => void } = $props();
   let imageInput = $state<HTMLInputElement>();
@@ -39,6 +40,8 @@
   let zoom = $state(2);
   let selectedId = $state<string | undefined>(undefined);
   let nodes = $state<SceneNode[]>([]);
+  let availableTemplates = $state(PAPER_TEMPLATES);
+  let connected = $state(false);
 
   const imageCache = new Map<string, HTMLImageElement>();
   let dragging = $state(false);
@@ -214,12 +217,22 @@
 
   onMount(() => {
     if (canvasEl) ctx = canvasEl.getContext("2d");
-    const unsub = scene.subscribe((s) => {
+    const unsubScene = scene.subscribe((s) => {
       nodes = s.nodes;
       selectedId = s.selectedId;
     });
+    const unsubMeta = printerMeta.subscribe((m) => {
+      availableTemplates = filterTemplatesForPrinter(PAPER_TEMPLATES, m);
+    });
+    const unsubConn = connectionState.subscribe((c) => {
+      connected = c === "connected";
+    });
     scheduleRender();
-    return unsub;
+    return () => {
+      unsubScene();
+      unsubMeta();
+      unsubConn();
+    };
   });
 
   onDestroy(() => {
@@ -303,10 +316,24 @@
       }}
     >
       <option value={-1}>Custom...</option>
-      {#each PAPER_TEMPLATES as t, i (t.title)}
-        <option value={i}>{t.title} ({t.widthMm}x{t.continuous ? 'var' : t.heightMm}mm)</option>
+      {#each PAPER_FAMILIES as fam (fam.id)}
+        {@const inFam = PAPER_TEMPLATES
+          .map((t, i) => ({ t, i }))
+          .filter(({ t }) => t.family === fam.id && (!connected || availableTemplates.includes(t)))}
+        {#if inFam.length > 0}
+          <optgroup label={fam.label}>
+            {#each inFam as { t, i } (t.title)}
+              <option value={i}>{t.title} ({t.widthMm}x{t.continuous ? 'var' : t.heightMm}mm)</option>
+            {/each}
+          </optgroup>
+        {/if}
       {/each}
     </select>
+    {#if connected}
+      <span class="text-success">filtered to connected printer</span>
+    {:else}
+      <span>connect a printer to filter</span>
+    {/if}
     <span class="ml-1">{$labelProps.size.width} x {$labelProps.size.height} px</span>
   </div>
 
