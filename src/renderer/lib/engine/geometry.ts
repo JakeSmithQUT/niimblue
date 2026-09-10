@@ -29,5 +29,23 @@ export const nodeBounds = (node: SceneNode) => ({
   height: node.height,
 });
 
-export const boundsIntersect = (a: DOMRect, b: DOMRect) =>
-  a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+export const HANDLE_SIZE = 8;
+
+export type HandleId = "nw" | "ne" | "sw" | "se";
+
+export const handlePoints = (node: SceneNode): Record<HandleId, { x: number; y: number }> => ({
+  nw: { x: node.x, y: node.y },
+  ne: { x: node.x + node.width, y: node.y },
+  sw: { x: node.x, y: node.y + node.height },
+  se: { x: node.x + node.width, y: node.y + node.height },
+});
+
+export const handleAt = (node: SceneNode, px: number, py: number, viewScale: number): HandleId | undefined => {
+  const h = HANDLE_SIZE / (2 * viewScale);
+  const pts = handlePoints(node);
+  for (const id of ["nw", "ne", "sw", "se"] as HandleId[]) {
+    const p = pts[id];
+    if (px >= p.x - h && px <= p.x + h && py >= p.y - h && py <= p.y + h) return id;
+  }
+  return undefined;
+};

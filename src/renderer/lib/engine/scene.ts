@@ -83,6 +83,35 @@ export const moveNode = (id: string, x: number, y: number) => {
   }));
 };
 
+export const resizeNode = (id: string, handle: "nw" | "ne" | "sw" | "se", x: number, y: number) => {
+  scene.update((st) => ({
+    ...st,
+    nodes: st.nodes.map((n) => {
+      if (n.id !== id) return n;
+      let { x: nx, y: ny, width: w, height: h } = n;
+      if (handle === "nw" || handle === "sw") {
+        const right = nx + w;
+        nx = Math.min(x, right - 1);
+        w = right - nx;
+      } else {
+        const left = nx;
+        const maxW = Math.max(1, x - left);
+        w = maxW;
+      }
+      if (handle === "nw" || handle === "ne") {
+        const bottom = ny + h;
+        ny = Math.min(y, bottom - 1);
+        h = bottom - ny;
+      } else {
+        const top = ny;
+        const maxH = Math.max(1, y - top);
+        h = maxH;
+      }
+      return { ...n, x: nx, y: ny, width: w, height: h } as SceneNode;
+    }),
+  }));
+};
+
 export const bringToFront = (id: string) => {
   pushUndo();
   scene.update((st) => {
