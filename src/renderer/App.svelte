@@ -7,6 +7,10 @@
   import PropertiesPanel from "./components/PropertiesPanel.svelte";
   import LayersPanel from "./components/LayersPanel.svelte";
   import LibraryView from "./components/LibraryView.svelte";
+  import PrinterTools from "./components/PrinterTools.svelte";
+  import PrintDialog from "./components/PrintDialog.svelte";
+
+  let printOpen = $state(false);
 </script>
 
 <div class="flex h-full w-full flex-col">
@@ -17,9 +21,11 @@
 
     <main class="min-w-0 flex-1 overflow-hidden bg-surface-1">
       {#if $activeView === "design"}
-        <EditorCanvas />
+        <EditorCanvas onPrint={() => (printOpen = true)} />
       {:else if $activeView === "library"}
         <LibraryView />
+      {:else if $activeView === "tools"}
+        <PrinterTools />
       {:else}
         <div class="flex h-full items-center justify-center text-muted">
           Settings land in phase 7.
@@ -37,3 +43,5 @@
 </div>
 
 <ToastStack />
+
+<PrintDialog bind:show={printOpen} />

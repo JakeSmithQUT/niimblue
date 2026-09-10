@@ -6,12 +6,16 @@
 
   let {
     onadd,
+    onAddImage,
+    onPrint,
     zoom,
     onZoomIn,
     onZoomOut,
     onZoomFit,
   }: {
     onadd: (kind: NodeKind) => void;
+    onAddImage: () => void;
+    onPrint: () => void;
     zoom: number;
     onZoomIn: () => void;
     onZoomOut: () => void;
@@ -38,6 +42,7 @@
     { kind: "barcode", icon: "barcode" },
     { kind: "aruco", icon: "grid_on" },
   ];
+  const imageTool = { kind: "image", icon: "image" } as const;
 </script>
 
 <div
@@ -48,6 +53,9 @@
   </button>
   <button class="file-btn" onclick={onSave} title="Save">
     <span class="material-symbols-rounded text-[20px]">save</span>
+  </button>
+  <button class="print-btn" onclick={onPrint} title="Print">
+    <span class="material-symbols-rounded text-[20px]">print</span>
   </button>
 
   <div class="mx-1 h-6 w-px bg-border"></div>
@@ -61,6 +69,13 @@
       <span class="material-symbols-rounded text-[20px]">{t.icon}</span>
     </button>
   {/each}
+  <button
+    class="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-white"
+    title={`Add ${kindLabel[imageTool.kind]}`}
+    onclick={onAddImage}
+  >
+    <span class="material-symbols-rounded text-[20px]">{imageTool.icon}</span>
+  </button>
 
   <div class="ml-auto flex items-center gap-1 text-sm text-muted">
     <button class="zoom-btn" onclick={onZoomOut} title="Zoom out">
@@ -103,6 +118,20 @@
   }
   .file-btn:hover {
     background: var(--color-surface-2);
+    color: #fff;
+  }
+  .print-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 32px;
+    border-radius: 6px;
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+  .print-btn:hover {
+    background: var(--color-accent);
     color: #fff;
   }
 </style>

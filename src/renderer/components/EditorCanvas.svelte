@@ -1,13 +1,38 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { labelProps } from "$lib/label";
-  import { scene, addNode, selectNode, moveNode, beginMutation, removeSelected, duplicateSelected } from "$lib/engine/scene";
+  import { scene, addNode, addExistingNode, selectNode, moveNode, beginMutation, removeSelected, duplicateSelected } from "$lib/engine/scene";
+  import { createImage } from "$lib/engine/factory";
   import { renderScene } from "$lib/engine/render";
   import { topNodeAt } from "$lib/engine/geometry";
   import type { SceneNode } from "$lib/engine/types";
   import Toolbar from "./Toolbar.svelte";
   import { setLabelSize } from "$lib/label";
   import { PAPER_TEMPLATES } from "$lib/paper";
+
+  let { onPrint }: { onPrint: () => void } = $props();
+  let imageInput = $state<HTMLInputElement>();
+
+  const pickImage = () => imageInput?.click();
+
+  const onImageChosen = (e: Event) => {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const max = 200;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        addExistingNode(createImage(src, Math.round(img.width * scale), Math.round(img.height * scale)));
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  };
 
   let canvasEl = $state<HTMLCanvasElement>();
   let ctx = $state<CanvasRenderingContext2D | null>(null);
@@ -168,8 +193,10 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
+<input type="file" accept="image/*" class="hidden" bind:this={imageInput} onchange={onImageChosen} />
+
 <div class="flex h-full flex-col">
-  <Toolbar onadd={addNode} {zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onZoomFit={zoomFit} />
+  <Toolbar onadd={addNode} onAddImage={pickImage} onPrint={onPrint} {zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onZoomFit={zoomFit} />
 
   <div class="flex shrink-0 items-center gap-2 border-b border-border bg-surface-0 px-3 py-1 text-xs text-muted">
     <span>Paper</span>

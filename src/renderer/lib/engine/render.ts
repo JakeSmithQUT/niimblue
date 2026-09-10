@@ -1,4 +1,7 @@
 import type { SceneNode } from "./types";
+import { drawQrCode } from "../image/qr";
+import { drawBarcode, type BarcodeCoding } from "../image/barcode";
+import { drawArUco, type ArUcoDictionary } from "../image/aruco";
 
 const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
   const radius = Math.min(r, w / 2, h / 2);
@@ -82,19 +85,6 @@ const drawImage = async (ctx: CanvasRenderingContext2D, node: Extract<SceneNode,
   ctx.drawImage(img, 0, 0, node.width, node.height);
 };
 
-const drawPlaceholder = (ctx: CanvasRenderingContext2D, node: SceneNode, label: string) => {
-  ctx.fillStyle = "#888";
-  ctx.strokeStyle = "#aaa";
-  ctx.setLineDash([4, 4]);
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0, 0, node.width, node.height);
-  ctx.setLineDash([]);
-  ctx.font = "12px sans-serif";
-  ctx.textBaseline = "middle";
-  ctx.textAlign = "center";
-  ctx.fillText(label, node.width / 2, node.height / 2);
-};
-
 export const renderNode = async (
   ctx: CanvasRenderingContext2D,
   node: SceneNode,
@@ -120,10 +110,26 @@ export const renderNode = async (
       await drawImage(ctx, node, imageCache);
       break;
     case "qrcode":
-    case "barcode":
-    case "aruco":
-      drawPlaceholder(ctx, node, node.kind.toUpperCase());
+      drawQrCode(ctx, node.width, node.height, node.text, node.ecc);
       break;
+    case "barcode":
+      drawBarcode(
+        ctx,
+        node.width,
+        node.height,
+        node.text,
+        (node.encoding === "EAN13" ? "EAN13" : "CODE128B") as BarcodeCoding,
+        true,
+        1,
+        12,
+        "sans-serif",
+      );
+      break;
+    case "aruco": {
+      const dictKey = (node.size === 5 ? "5x5" : node.size === 6 ? "6x6" : "4x4") as ArUcoDictionary;
+      drawArUco(ctx, node.width, node.height, dictKey, node.markerId);
+      break;
+    }
   }
   ctx.restore();
 };
