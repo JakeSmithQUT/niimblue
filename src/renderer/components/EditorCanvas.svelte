@@ -55,6 +55,7 @@
   let textareaEl = $state<HTMLTextAreaElement>();
   let cursor = $state("default");
   let raf = 0;
+  let renderToken = 0;
 
   const scheduleRender = () => {
     if (raf) cancelAnimationFrame(raf);
@@ -70,8 +71,12 @@
     const displayW = width * zoom;
     const displayH = height * zoom;
 
-    canvasEl.width = displayW * dpr;
-    canvasEl.height = displayH * dpr;
+    const newW = Math.round(displayW * dpr);
+    const newH = Math.round(displayH * dpr);
+    if (canvasEl.width !== newW || canvasEl.height !== newH) {
+      canvasEl.width = newW;
+      canvasEl.height = newH;
+    }
     canvasEl.style.width = `${displayW}px`;
     canvasEl.style.height = `${displayH}px`;
 
@@ -82,15 +87,19 @@
     c.save();
     c.scale(zoom, zoom);
 
-    renderScene(c, nodes, imageCache).then(() => {
-      drawSelection(c);
+    const snapshot = nodes;
+    const selId = selectedId;
+    const token = ++renderToken;
+    renderScene(c, snapshot, imageCache).then(() => {
+      if (token !== renderToken) return;
+      drawSelection(c, snapshot, selId);
       c.restore();
     });
   };
 
-  const drawSelection = (c: CanvasRenderingContext2D) => {
-    if (!selectedId) return;
-    const node = nodes.find((n) => n.id === selectedId);
+  const drawSelection = (c: CanvasRenderingContext2D, snapshot: SceneNode[], selId: string | undefined) => {
+    if (!selId) return;
+    const node = snapshot.find((n) => n.id === selId);
     if (!node) return;
     c.save();
     c.strokeStyle = "#3b82f6";
@@ -99,16 +108,21 @@
     c.strokeRect(node.x, node.y, node.width, node.height);
     c.setLineDash([]);
     if (node.kind !== "line") {
-      const h = 5 / zoom;
+      const h = 6 / zoom;
       const handles: [number, number][] = [
         [node.x, node.y],
         [node.x + node.width, node.y],
         [node.x, node.y + node.height],
         [node.x + node.width, node.y + node.height],
       ];
-      c.fillStyle = "#3b82f6";
+      c.fillStyle = "#fff";
+      c.strokeStyle = "#3b82f6";
+      c.lineWidth = 1.5 / zoom;
       for (const [hx, hy] of handles) {
-        c.fillRect(hx - h, hy - h, h * 2, h * 2);
+        c.beginPath();
+        c.arc(hx, hy, h, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
       }
     }
     c.restore();
@@ -129,6 +143,7 @@
 
   const onDown = (e: MouseEvent) => {
     if (editingId) return;
+    e.preventDefault();
     const { x, y } = toSceneCoords(e);
     const selected = nodes.find((n) => n.id === selectedId);
     if (selected) {
@@ -138,6 +153,7 @@
         resizing = true;
         resizeHandle = handle;
         resizeTarget = selected;
+        beginDragListeners();
         return;
       }
     }
@@ -148,6 +164,7 @@
       dragOffset = { x: x - hit.x, y: y - hit.y };
       beginMutation();
       dragging = true;
+      beginDragListeners();
     } else {
       selectNode(undefined);
     }
@@ -160,28 +177,38 @@
       scheduleRender();
       return;
     }
-    if (!dragging || !dragNode) {
-      const { x, y } = toSceneCoords(e);
-      const selected = nodes.find((n) => n.id === selectedId);
-      if (selected) {
-        const handle = handleAt(selected, x, y, zoom);
-        cursor = cursorFor(handle, !!topNodeAt(nodes, x, y));
-      } else {
-        cursor = topNodeAt(nodes, x, y) ? "move" : "default";
-      }
-      return;
-    }
+    if (!dragging || !dragNode) return;
     const { x, y } = toSceneCoords(e);
     moveNode(dragNode.id, x - dragOffset.x, y - dragOffset.y);
     scheduleRender();
   };
 
+  const onHover = (e: MouseEvent) => {
+    if (dragging || resizing) return;
+    const { x, y } = toSceneCoords(e);
+    const selected = nodes.find((n) => n.id === selectedId);
+    if (selected) {
+      const handle = handleAt(selected, x, y, zoom);
+      cursor = cursorFor(handle, !!topNodeAt(nodes, x, y));
+    } else {
+      cursor = topNodeAt(nodes, x, y) ? "move" : "default";
+    }
+  };
+
   const onUp = () => {
+    if (!dragging && !resizing) return;
     dragging = false;
     resizing = false;
     dragNode = undefined;
     resizeTarget = undefined;
     resizeHandle = undefined;
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  };
+
+  const beginDragListeners = () => {
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   const onDoubleClick = (e: MouseEvent) => {
@@ -341,9 +368,7 @@
     <canvas
       bind:this={canvasEl}
       onmousedown={onDown}
-      onmousemove={onMove}
-      onmouseup={onUp}
-      onmouseleave={onUp}
+      onmousemove={onHover}
       ondblclick={onDoubleClick}
       onwheel={onWheel}
       class="shadow-2xl"

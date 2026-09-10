@@ -10,7 +10,9 @@ export const nodeContainsPoint = (node: SceneNode, px: number, py: number): bool
   const dy = py - cy;
   const lx = dx * cos - dy * sin;
   const ly = dx * sin + dy * cos;
-  return lx >= 0 && lx <= node.width && ly >= 0 && ly <= node.height;
+  const hw = node.width / 2;
+  const hh = node.height / 2;
+  return lx >= -hw && lx <= hw && ly >= -hh && ly <= hh;
 };
 
 export const topNodeAt = (nodes: SceneNode[], x: number, y: number): SceneNode | undefined => {
@@ -29,7 +31,7 @@ export const nodeBounds = (node: SceneNode) => ({
   height: node.height,
 });
 
-export const HANDLE_SIZE = 8;
+export const HANDLE_HIT_PX = 12;
 
 export type HandleId = "nw" | "ne" | "sw" | "se";
 
@@ -41,7 +43,7 @@ export const handlePoints = (node: SceneNode): Record<HandleId, { x: number; y: 
 });
 
 export const handleAt = (node: SceneNode, px: number, py: number, viewScale: number): HandleId | undefined => {
-  const h = HANDLE_SIZE / (2 * viewScale);
+  const h = HANDLE_HIT_PX / viewScale;
   const pts = handlePoints(node);
   for (const id of ["nw", "ne", "sw", "se"] as HandleId[]) {
     const p = pts[id];
