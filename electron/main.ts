@@ -33,6 +33,11 @@ const createWindow = () => {
   }
 };
 
+const sendAction = (action: string) => {
+  const win = BrowserWindow.getFocusedWindow();
+  win?.webContents.send("menu-action", action);
+};
+
 const buildMenu = () => {
   const isMac = process.platform === "darwin";
 
@@ -61,7 +66,23 @@ const buildMenu = () => {
         {
           label: "New label",
           accelerator: "CmdOrCtrl+N",
-          click: () => Menu.sendActionToFirstResponder("new-label"),
+          click: () => sendAction("new"),
+        },
+        {
+          label: "Open label...",
+          accelerator: "CmdOrCtrl+O",
+          click: () => sendAction("open"),
+        },
+        {
+          label: "Save label...",
+          accelerator: "CmdOrCtrl+S",
+          click: () => sendAction("save"),
+        },
+        { type: "separator" },
+        {
+          label: "Print...",
+          accelerator: "CmdOrCtrl+P",
+          click: () => sendAction("print"),
         },
         { type: "separator" },
         isMac ? { role: "close" } : { role: "quit" },
@@ -70,8 +91,16 @@ const buildMenu = () => {
     {
       label: "Edit",
       submenu: [
-        { role: "undo" },
-        { role: "redo" },
+        {
+          label: "Undo",
+          accelerator: "CmdOrCtrl+Z",
+          click: () => sendAction("undo"),
+        },
+        {
+          label: "Redo",
+          accelerator: "CmdOrCtrl+Shift+Z",
+          click: () => sendAction("redo"),
+        },
         { type: "separator" },
         { role: "cut" },
         { role: "copy" },

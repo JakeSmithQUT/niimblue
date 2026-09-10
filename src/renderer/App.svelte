@@ -1,5 +1,11 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import { activeView } from "$lib/view";
+  import { labelProps } from "$lib/label";
+  import { DEFAULT_LABEL } from "$lib/label";
+  import { scene, undo, redo } from "$lib/engine/scene";
+  import { saveCurrentLabel, openLabelFile } from "$lib/library";
+  import { toast } from "$lib/toast";
   import PrinterBar from "./components/PrinterBar.svelte";
   import Sidebar from "./components/Sidebar.svelte";
   import ToastStack from "./components/ToastStack.svelte";
@@ -11,6 +17,49 @@
   import PrintDialog from "./components/PrintDialog.svelte";
 
   let printOpen = $state(false);
+
+  const newLabel = () => {
+    labelProps.set(structuredClone(DEFAULT_LABEL));
+    scene.set({ nodes: [], selectedId: undefined });
+    activeView.set("design");
+    toast("New label", "info");
+  };
+
+  const onSave = async () => {
+    const name = prompt("Label name", "Untitled");
+    if (!name) return;
+    await saveCurrentLabel(name);
+    toast(`Saved ${name}`, "success");
+  };
+
+  const onMenuAction = (action: string) => {
+    switch (action) {
+      case "new":
+        newLabel();
+        break;
+      case "open":
+        openLabelFile();
+        break;
+      case "save":
+        onSave();
+        break;
+      case "print":
+        printOpen = true;
+        break;
+      case "undo":
+        undo();
+        break;
+      case "redo":
+        redo();
+        break;
+    }
+  };
+
+  let offMenu: (() => void) | undefined;
+  onMount(() => {
+    offMenu = window.electronAPI?.onMenuAction(onMenuAction);
+  });
+  onDestroy(() => offMenu?.());
 </script>
 
 <div class="flex h-full w-full flex-col">

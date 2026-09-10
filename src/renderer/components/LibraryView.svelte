@@ -12,12 +12,12 @@
   });
 
   const loadThumbnails = async () => {
-    const api = (window as any).electronAPI;
-    if (!api?.loadLibraryFile) return;
+    if (!window.electronAPI?.loadLibraryFile) return;
     for (const entry of $library) {
       if (thumbs[entry.path] || thumbnailFor(entry)) continue;
       try {
-        const raw = await api.loadLibraryFile(entry.path);
+        const raw = await window.electronAPI.loadLibraryFile(entry.path);
+        if (!raw) continue;
         const parsed = JSON.parse(raw);
         if (parsed.thumbnail) {
           cacheThumbnail(entry.path, parsed.thumbnail);
@@ -35,9 +35,8 @@
   };
 
   const open = async (path: string) => {
-    const api = (window as any).electronAPI;
-    if (!api?.loadLibraryFile) return;
-    const raw = await api.loadLibraryFile(path);
+    if (!window.electronAPI?.loadLibraryFile) return;
+    const raw = await window.electronAPI.loadLibraryFile(path);
     if (raw) loadFromData(raw, path);
     activeView.set("design");
   };

@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 
 const api = {
   platform: process.platform,
-  isPackaged: process.versions as unknown as boolean,
+  isPackaged: (process as unknown as { defaultApp?: string }).defaultApp !== undefined,
   onMenuAction: (cb: (action: string) => void) => {
     const handler = (_e: unknown, action: string) => cb(action);
     ipcRenderer.on("menu-action", handler);
