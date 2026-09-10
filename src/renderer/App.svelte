@@ -3,6 +3,8 @@
   import Sidebar from "./components/Sidebar.svelte";
   import ToastStack from "./components/ToastStack.svelte";
   import EditorCanvas from "./components/EditorCanvas.svelte";
+  import PropertiesPanel from "./components/PropertiesPanel.svelte";
+  import LayersPanel from "./components/LayersPanel.svelte";
 
   let activeView = $state<"design" | "library" | "settings">("design");
 </script>
@@ -26,6 +28,13 @@
         </div>
       {/if}
     </main>
+
+    {#if activeView === "design"}
+      <aside class="flex shrink-0 flex-col">
+        <PropertiesPanel />
+        <LayersPanel />
+      </aside>
+    {/if}
   </div>
 </div>
 
