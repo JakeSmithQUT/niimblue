@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { labelProps } from "$lib/label";
-  import { scene, addNode, addExistingNode, selectNode, moveNode, beginMutation, removeSelected, duplicateSelected } from "$lib/engine/scene";
+  import { scene, addNode, addExistingNode, selectNode, moveNode, beginMutation, removeSelected, duplicateSelected, undo, redo } from "$lib/engine/scene";
   import { createImage } from "$lib/engine/factory";
   import { renderScene } from "$lib/engine/render";
   import { topNodeAt } from "$lib/engine/geometry";
@@ -165,13 +165,30 @@
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    const inField = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
     if (e.key === "Delete" || e.key === "Backspace") {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if (inField) return;
       removeSelected();
     } else if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       duplicateSelected();
+    } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    } else if (e.key === "Escape") {
+      if (inField) return;
+      selectNode(undefined);
+    } else if (!inField && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      e.preventDefault();
+      const sel = nodes.find((n) => n.id === selectedId);
+      if (!sel) return;
+      const step = e.shiftKey ? 10 : 1;
+      const nx = e.key === "ArrowLeft" ? sel.x - step : e.key === "ArrowRight" ? sel.x + step : sel.x;
+      const ny = e.key === "ArrowUp" ? sel.y - step : e.key === "ArrowDown" ? sel.y + step : sel.y;
+      moveNode(sel.id, nx, ny);
+      scheduleRender();
     }
   };
 
