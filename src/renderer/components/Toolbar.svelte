@@ -6,6 +6,7 @@
 
   let {
     onadd,
+    onAddImage,
     onPrint,
     zoom,
     onZoomIn,
@@ -13,6 +14,7 @@
     onZoomFit,
   }: {
     onadd: (kind: NodeKind) => void;
+    onAddImage: () => void;
     onPrint: () => void;
     zoom: number;
     onZoomIn: () => void;
@@ -40,6 +42,7 @@
     { kind: "barcode", icon: "barcode" },
     { kind: "aruco", icon: "grid_on" },
   ];
+  const imageTool = { kind: "image", icon: "image" } as const;
 </script>
 
 <div
@@ -66,6 +69,13 @@
       <span class="material-symbols-rounded text-[20px]">{t.icon}</span>
     </button>
   {/each}
+  <button
+    class="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-white"
+    title={`Add ${kindLabel[imageTool.kind]}`}
+    onclick={onAddImage}
+  >
+    <span class="material-symbols-rounded text-[20px]">{imageTool.icon}</span>
+  </button>
 
   <div class="ml-auto flex items-center gap-1 text-sm text-muted">
     <button class="zoom-btn" onclick={onZoomOut} title="Zoom out">

@@ -11,12 +11,18 @@ export type LabelFile = {
   timestamp: number;
 };
 
-export const serializeLabel = (title: string, label: LabelProps, nodes: SceneNode[]): string => {
+export const serializeLabel = (
+  title: string,
+  label: LabelProps,
+  nodes: SceneNode[],
+  thumbnail?: string,
+): string => {
   const data: LabelFile = {
     version: 1,
     title,
     label,
     nodes,
+    thumbnail,
     timestamp: Date.now(),
   };
   return JSON.stringify(data, null, 2);

@@ -2,6 +2,7 @@ import { writable } from "svelte/store";
 import { serializeLabel, parseLabel } from "./labelFile";
 import { labelProps } from "./label";
 import { scene } from "./engine/scene";
+import { renderThumbnail } from "./image/rasterize";
 import { get } from "svelte/store";
 import type { SceneNode } from "./engine/types";
 
@@ -23,7 +24,9 @@ export const refreshLibrary = async () => {
 export const saveCurrentLabel = async (title: string) => {
   if (!api()?.saveLabel) return;
   const s = get(scene);
-  const data = serializeLabel(title, get(labelProps), s.nodes);
+  const label = get(labelProps);
+  const thumbnail = await renderThumbnail(label, s.nodes).catch(() => undefined);
+  const data = serializeLabel(title, label, s.nodes, thumbnail);
   await api().saveLabel(title, data);
   await refreshLibrary();
 };
@@ -40,6 +43,16 @@ export const loadFromData = (raw: string, _path: string) => {
   if (!parsed) return;
   labelProps.set(parsed.label);
   scene.set({ nodes: parsed.nodes as SceneNode[], selectedId: undefined });
+};
+
+export const thumbnailFor = (entry: LibraryEntry): string | undefined => {
+  return entryThumbCache.get(entry.path);
+};
+
+const entryThumbCache = new Map<string, string>();
+
+export const cacheThumbnail = (path: string, thumb: string): void => {
+  entryThumbCache.set(path, thumb);
 };
 
 export const deleteLibraryEntry = async (path: string) => {

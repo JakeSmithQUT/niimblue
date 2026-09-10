@@ -1,11 +1,33 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { library, refreshLibrary, loadFromData, deleteLibraryEntry } from "$lib/library";
+  import { library, refreshLibrary, loadFromData, deleteLibraryEntry, cacheThumbnail, thumbnailFor } from "$lib/library";
   import { activeView } from "$lib/view";
 
   let search = $state("");
+  let thumbs = $state<Record<string, string>>({});
 
-  onMount(refreshLibrary);
+  onMount(async () => {
+    await refreshLibrary();
+    await loadThumbnails();
+  });
+
+  const loadThumbnails = async () => {
+    const api = (window as any).electronAPI;
+    if (!api?.loadLibraryFile) return;
+    for (const entry of $library) {
+      if (thumbs[entry.path] || thumbnailFor(entry)) continue;
+      try {
+        const raw = await api.loadLibraryFile(entry.path);
+        const parsed = JSON.parse(raw);
+        if (parsed.thumbnail) {
+          cacheThumbnail(entry.path, parsed.thumbnail);
+          thumbs = { ...thumbs, [entry.path]: parsed.thumbnail };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   const filtered = () => {
     const q = search.toLowerCase();
@@ -61,8 +83,12 @@
             onclick={() => open(entry.path)}
             onkeydown={(e) => e.key === "Enter" && open(entry.path)}
           >
-            <div class="flex aspect-square items-center justify-center rounded-md bg-white text-muted">
-              <span class="material-symbols-rounded text-[32px] text-surface-3">label</span>
+            <div class="flex aspect-square items-center justify-center overflow-hidden rounded-md bg-white">
+              {#if thumbs[entry.path]}
+                <img src={thumbs[entry.path]} alt={entry.name} class="h-full w-full object-contain" style="image-rendering: pixelated;" />
+              {:else}
+                <span class="material-symbols-rounded text-[32px] text-surface-3">label</span>
+              {/if}
             </div>
             <div class="flex items-center gap-1">
               <span class="flex-1 truncate text-sm">{entry.name}</span>

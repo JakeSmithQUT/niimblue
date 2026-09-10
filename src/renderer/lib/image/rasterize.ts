@@ -35,3 +35,20 @@ export const renderLabelToCanvas = async (
 
 const substituteVars = (text: string, vars: Record<string, string>): string =>
   text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => vars[key] ?? "");
+
+export const renderThumbnail = async (
+  label: LabelProps,
+  nodes: SceneNode[],
+  maxDim = 160,
+): Promise<string> => {
+  const cache = new Map<string, HTMLImageElement>();
+  const { canvas, ctx } = await renderLabelToCanvas(label, nodes, cache);
+  const scale = Math.min(1, maxDim / Math.max(canvas.width, canvas.height));
+  const thumb = document.createElement("canvas");
+  thumb.width = Math.max(1, Math.round(canvas.width * scale));
+  thumb.height = Math.max(1, Math.round(canvas.height * scale));
+  const tctx = thumb.getContext("2d")!;
+  tctx.imageSmoothingEnabled = false;
+  tctx.drawImage(canvas, 0, 0, thumb.width, thumb.height);
+  return thumb.toDataURL("image/png");
+};
