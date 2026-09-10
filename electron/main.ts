@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell, Menu } from "electron";
+import { app, BrowserWindow, shell, Menu, ipcMain, dialog } from "electron";
 import { join } from "node:path";
+import { readFileSync, writeFileSync, readdirSync, unlinkSync, existsSync, mkdirSync } from "node:fs";
 
 const isDev = !app.isPackaged;
 
@@ -100,6 +101,65 @@ const buildMenu = () => {
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template as Electron.MenuItemConstructorOptions[]));
 };
+
+const libraryDir = () => join(app.getPath("userData"), "labels");
+const ensureLibraryDir = () => {
+  const dir = libraryDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return dir;
+};
+
+const LABEL_FILTERS = [{ name: "Niimblue label", extensions: ["nbl"] }];
+
+ipcMain.handle("label:open", async () => {
+  const win = BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(win!, {
+    filters: LABEL_FILTERS,
+    properties: ["openFile"],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  const path = result.filePaths[0];
+  return { path, data: readFileSync(path, "utf8") };
+});
+
+ipcMain.handle("label:save", async (_e, name: string, data: string) => {
+  const win = BrowserWindow.getFocusedWindow();
+  const safe = name.replace(/[^a-zA-Z0-9-_ ]/g, "_");
+  const result = await dialog.showSaveDialog(win!, {
+    defaultPath: `${safe}.nbl`,
+    filters: LABEL_FILTERS,
+  });
+  if (result.canceled || !result.filePath) return null;
+  writeFileSync(result.filePath, data, "utf8");
+  return result.filePath;
+});
+
+ipcMain.handle("library:list", async () => {
+  ensureLibraryDir();
+  try {
+    const files = readdirSync(libraryDir()).filter((f) => f.endsWith(".nbl"));
+    return files.map((f) => ({ name: f.replace(/\.nbl$/, ""), path: join(libraryDir(), f) }));
+  } catch {
+    return [];
+  }
+});
+
+ipcMain.handle("library:load", async (_e, path: string) => {
+  if (!existsSync(path)) return null;
+  return readFileSync(path, "utf8");
+});
+
+ipcMain.handle("library:delete", async (_e, path: string) => {
+  if (existsSync(path)) unlinkSync(path);
+  return true;
+});
+
+ipcMain.handle("library:chooseFolder", async () => {
+  const win = BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(win!, { properties: ["openDirectory"] });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
 
 app.whenReady().then(() => {
   buildMenu();

@@ -1,56 +1,203 @@
 <script lang="ts">
-  import { labelProps, setLabelSize } from "$lib/label";
+  import { onMount, onDestroy } from "svelte";
+  import { labelProps } from "$lib/label";
+  import { scene, addNode, selectNode, moveNode, beginMutation, removeSelected, duplicateSelected } from "$lib/engine/scene";
+  import { renderScene } from "$lib/engine/render";
+  import { topNodeAt } from "$lib/engine/geometry";
+  import type { SceneNode } from "$lib/engine/types";
+  import Toolbar from "./Toolbar.svelte";
+  import { setLabelSize } from "$lib/label";
   import { PAPER_TEMPLATES } from "$lib/paper";
 
   let canvasEl = $state<HTMLCanvasElement>();
   let ctx = $state<CanvasRenderingContext2D | null>(null);
+  let zoom = $state(2);
+  let selectedId = $state<string | undefined>(undefined);
+  let nodes = $state<SceneNode[]>([]);
 
-  const draw = () => {
-    if (!canvasEl || !ctx) return;
-    const { width, height } = $labelProps.size;
-    canvasEl.width = width;
-    canvasEl.height = height;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
+  const imageCache = new Map<string, HTMLImageElement>();
+  let dragging = $state(false);
+  let dragNode: SceneNode | undefined;
+  let dragOffset = { x: 0, y: 0 };
+  let raf = 0;
+
+  const scheduleRender = () => {
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(render);
   };
 
-  $effect(() => {
+  const render = () => {
+    raf = 0;
+    if (!canvasEl || !ctx) return;
+    const c = ctx;
+    const dpr = window.devicePixelRatio || 1;
+    const { width, height } = $labelProps.size;
+    const displayW = width * zoom;
+    const displayH = height * zoom;
+
+    canvasEl.width = displayW * dpr;
+    canvasEl.height = displayH * dpr;
+    canvasEl.style.width = `${displayW}px`;
+    canvasEl.style.height = `${displayH}px`;
+
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = "#fff";
+    c.fillRect(0, 0, displayW, displayH);
+
+    c.save();
+    c.scale(zoom, zoom);
+
+    renderScene(c, nodes, imageCache).then(() => {
+      drawSelection(c);
+      c.restore();
+    });
+  };
+
+  const drawSelection = (c: CanvasRenderingContext2D) => {
+    if (!selectedId) return;
+    const node = nodes.find((n) => n.id === selectedId);
+    if (!node) return;
+    c.save();
+    c.strokeStyle = "#3b82f6";
+    c.lineWidth = 1 / zoom;
+    c.setLineDash([4 / zoom, 4 / zoom]);
+    c.strokeRect(node.x, node.y, node.width, node.height);
+    c.setLineDash([]);
+    const h = 5 / zoom;
+    const handles = [
+      [node.x, node.y],
+      [node.x + node.width, node.y],
+      [node.x, node.y + node.height],
+      [node.x + node.width, node.y + node.height],
+    ];
+    c.fillStyle = "#3b82f6";
+    for (const [hx, hy] of handles) {
+      c.fillRect(hx - h, hy - h, h * 2, h * 2);
+    }
+    c.restore();
+  };
+
+  const toSceneCoords = (e: MouseEvent) => {
+    const rect = canvasEl!.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
+    return { x, y };
+  };
+
+  const onDown = (e: MouseEvent) => {
+    const { x, y } = toSceneCoords(e);
+    const hit = topNodeAt(nodes, x, y);
+    if (hit) {
+      selectNode(hit.id);
+      dragNode = hit;
+      dragOffset = { x: x - hit.x, y: y - hit.y };
+      beginMutation();
+      dragging = true;
+    } else {
+      selectNode(undefined);
+    }
+  };
+
+  const onMove = (e: MouseEvent) => {
+    if (!dragging || !dragNode) return;
+    const { x, y } = toSceneCoords(e);
+    moveNode(dragNode.id, x - dragOffset.x, y - dragOffset.y);
+    scheduleRender();
+  };
+
+  const onUp = () => {
+    dragging = false;
+    dragNode = undefined;
+  };
+
+  onMount(() => {
     if (canvasEl) ctx = canvasEl.getContext("2d");
-    draw();
+    const unsub = scene.subscribe((s) => {
+      nodes = s.nodes;
+      selectedId = s.selectedId;
+    });
+    scheduleRender();
+    return unsub;
+  });
+
+  onDestroy(() => {
+    if (raf) cancelAnimationFrame(raf);
   });
 
   $effect(() => {
+    nodes;
+    selectedId;
     $labelProps.size;
-    draw();
+    scheduleRender();
   });
+
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      zoom = Math.max(0.25, Math.min(8, zoom - e.deltaY * 0.002));
+      scheduleRender();
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Delete" || e.key === "Backspace") {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      removeSelected();
+    } else if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      duplicateSelected();
+    }
+  };
+
+  const zoomIn = () => {
+    zoom = Math.min(8, zoom * 1.2);
+    scheduleRender();
+  };
+  const zoomOut = () => {
+    zoom = Math.max(0.25, zoom / 1.2);
+    scheduleRender();
+  };
+  const zoomFit = () => {
+    if (!canvasEl) return;
+    const parent = canvasEl.parentElement!.getBoundingClientRect();
+    zoom = Math.min(parent.width / $labelProps.size.width, parent.height / $labelProps.size.height) * 0.9;
+    scheduleRender();
+  };
 </script>
 
+<svelte:window onkeydown={onKeyDown} />
+
 <div class="flex h-full flex-col">
-  <div class="flex shrink-0 items-center gap-3 border-b border-border bg-surface-1 px-4 py-2 text-sm text-muted">
-    <span>{$labelProps.size.width} x {$labelProps.size.height} px</span>
-    <span class="text-border">|</span>
-    <span>{$labelProps.printDirection === "left" ? "feeds left-first" : "feeds top-first"}</span>
-    <div class="ml-auto">
-      <select
-        class="rounded-md border border-border bg-surface-2 px-2 py-1 text-xs"
-        onchange={(e) => {
-          const idx = Number((e.target as HTMLSelectElement).value);
-          const t = PAPER_TEMPLATES[idx];
-          if (t) setLabelSize(t);
-        }}
-      >
-        <option value={-1} selected>Choose paper...</option>
-        {#each PAPER_TEMPLATES as t, i (t.title)}
-          <option value={i}>{t.title} ({t.widthMm}x{t.continuous ? "var" : `${t.heightMm}`}mm)</option>
-        {/each}
-      </select>
-    </div>
+  <Toolbar onadd={addNode} {zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onZoomFit={zoomFit} />
+
+  <div class="flex shrink-0 items-center gap-2 border-b border-border bg-surface-0 px-3 py-1 text-xs text-muted">
+    <span>Paper</span>
+    <select
+      class="rounded-md border border-border bg-surface-2 px-2 py-1 text-xs"
+      onchange={(e) => {
+        const idx = Number(e.currentTarget.value);
+        if (idx >= 0) setLabelSize(PAPER_TEMPLATES[idx]);
+      }}
+    >
+      <option value={-1}>Custom...</option>
+      {#each PAPER_TEMPLATES as t, i (t.title)}
+        <option value={i}>{t.title} ({t.widthMm}x{t.continuous ? 'var' : t.heightMm}mm)</option>
+      {/each}
+    </select>
+    <span class="ml-1">{$labelProps.size.width} x {$labelProps.size.height} px</span>
   </div>
 
-  <div class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-8">
-    <canvas bind:this={canvasEl} class="shadow-2xl" style="image-rendering: pixelated; max-width: 90%; max-height: 90%;"></canvas>
+  <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-surface-1 p-8">
+    <canvas
+      bind:this={canvasEl}
+      onmousedown={onDown}
+      onmousemove={onMove}
+      onmouseup={onUp}
+      onmouseleave={onUp}
+      onwheel={onWheel}
+      class="shadow-2xl"
+      style="image-rendering: pixelated; cursor: {dragging ? 'grabbing' : 'default'};"
+    ></canvas>
   </div>
 </div>
