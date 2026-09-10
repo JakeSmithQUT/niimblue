@@ -9,9 +9,6 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
-      input: resolve(__dirname, "index.electron.html"),
-    },
   },
   resolve: {
     alias: {
