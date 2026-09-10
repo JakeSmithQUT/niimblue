@@ -1,4 +1,5 @@
 import type { PrintDirection } from "./label";
+import { LabelType, type PrinterModelMeta } from "@mmote/niimbluelib";
 
 export type PaperFamily =
   | "d-series"
@@ -13,6 +14,7 @@ export type PaperTemplate = {
   heightMm?: number;
   dpmm: number;
   printDirection: PrintDirection;
+  labelType: LabelType;
   continuous?: boolean;
   shape?: "rect" | "rounded" | "circle";
 };
@@ -25,6 +27,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 40,
     dpmm: 8,
     printDirection: "left",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "D 15x50mm",
@@ -33,6 +36,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 50,
     dpmm: 8,
     printDirection: "left",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "D 12x75mm",
@@ -41,6 +45,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 75,
     dpmm: 8,
     printDirection: "left",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "D 12x40mm round",
@@ -50,6 +55,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     dpmm: 8,
     printDirection: "left",
     shape: "rounded",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "D continuous 15mm",
@@ -58,6 +64,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     dpmm: 8,
     printDirection: "left",
     continuous: true,
+    labelType: LabelType.Continuous,
   },
   {
     title: "B 40x20mm",
@@ -66,6 +73,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 20,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B 40x30mm",
@@ -74,6 +82,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 30,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B 50x30mm",
@@ -82,6 +91,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 30,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B 40x60mm",
@@ -90,6 +100,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 60,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B 50x80mm",
@@ -98,6 +109,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 80,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B 40x30mm 300dpi",
@@ -106,6 +118,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 30,
     dpmm: 11.81,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B continuous 40mm",
@@ -114,6 +127,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     dpmm: 8,
     printDirection: "top",
     continuous: true,
+    labelType: LabelType.Continuous,
   },
   {
     title: "B continuous 50mm",
@@ -122,6 +136,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     dpmm: 8,
     printDirection: "top",
     continuous: true,
+    labelType: LabelType.Continuous,
   },
   {
     title: "B31 70x100mm",
@@ -130,6 +145,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 100,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.WithGaps,
   },
   {
     title: "B31 continuous 70mm",
@@ -138,6 +154,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     dpmm: 8,
     printDirection: "top",
     continuous: true,
+    labelType: LabelType.Continuous,
   },
   {
     title: "N1 PET 50x80mm",
@@ -146,6 +163,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     heightMm: 80,
     dpmm: 8,
     printDirection: "top",
+    labelType: LabelType.Transparent,
   },
   {
     title: "N1 PET continuous 50mm",
@@ -154,6 +172,7 @@ export const PAPER_TEMPLATES: PaperTemplate[] = [
     dpmm: 8,
     printDirection: "top",
     continuous: true,
+    labelType: LabelType.Transparent,
   },
 ];
 
@@ -163,3 +182,19 @@ export const PAPER_FAMILIES: { id: PaperFamily; label: string }[] = [
   { id: "b31-b4", label: "B31 / B4" },
   { id: "n1", label: "N1" },
 ];
+
+export const paperFitsPrinter = (template: PaperTemplate, meta: PrinterModelMeta): boolean => {
+  if (template.printDirection !== meta.printDirection) return false;
+  if (!meta.paperTypes.includes(template.labelType)) return false;
+  const widthPx = Math.round(template.widthMm * template.dpmm);
+  if (widthPx > meta.printheadPixels) return false;
+  return true;
+};
+
+export const filterTemplatesForPrinter = (
+  templates: PaperTemplate[],
+  meta: PrinterModelMeta | undefined,
+): PaperTemplate[] => {
+  if (!meta) return templates;
+  return templates.filter((t) => paperFitsPrinter(t, meta));
+};
