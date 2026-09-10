@@ -31,7 +31,7 @@ export default defineConfig(
       },
     },
     {
-      ignores: ["dist/", "capacitor/"],
+      ignores: ["dist/", "electron/dist/", "release/"],
     },
     {
       rules: {

@@ -1,6 +1,6 @@
 {
-  "appId": "com.niimblue.studio",
-  "productName": "Niimblue Studio",
+  "appId": "com.niimbot.unlocked",
+  "productName": "Niimbot Unlocked",
   "directories": {
     "output": "release"
   },

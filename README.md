@@ -1,167 +1,48 @@
-<div align="center">
+# Niimbot Unlocked
 
-[![logo](about/logo.svg)](https://niim.blue)
+A desktop label editor for Niimbot thermal printers. Runs on Windows as an Electron app and talks to the printer over a serial port, so no phone and no cloud account are needed.
 
-# NIIMBOT printers webui
+This is a rebuild of the [niimblue](https://github.com/MultiMote/niimblue) web app. The serial protocol and print pipeline come from [NiimBlueLib](https://github.com/MultiMote/niimbluelib); the editor and the rest of the UI are new.
 
-Design and print labels right from your browser
+## What it does
 
-[FAQ](https://github.com/MultiMote/niimblue/wiki/Frequently-asked-questions) | [Discord](https://discord.gg/jXPAfZVd8a) | [Telegram](https://t.me/niimblue) |  [NIIMBOT Community Wiki](https://printers.niim.blue)
-
-[NiimBlueLib](https://github.com/MultiMote/niimbluelib) is used for communication
-
-Deployments:
-
-[niim.blue](https://niim.blue) ![de](https://github.com/user-attachments/assets/07e72fdf-dd32-47a6-9071-43e77e9be7fa) main | [dev.niim.blue](https://dev.niim.blue) ![de](https://github.com/user-attachments/assets/07e72fdf-dd32-47a6-9071-43e77e9be7fa) dev | [2.niim.blue](https://2.niim.blue) ![ru](https://github.com/user-attachments/assets/b85647b0-4fb3-4b39-9da0-c31ec171067c) main
-
-Support project:
-
-[Boosty](https://boosty.to/multimote) | [Lava](https://app.lava.top/mithriss_art?tabId=donate) (less fees)
-
-
-</div>
-
-## Features
-
-* Privacy first! This application works completely offline (at browser side) and does not send any data (except for downloading application files and importing ZPL labels). Label data is stored in your browser.
-* Support for both Bluetooth and USB connections.
-* Rich label editor. Label saving, import/export.
-* Print preview. You can see how your label will look like after post-processing. Several post-processing algorithms are available.
-* [Standalone apps](https://github.com/MultiMote/niimblue/releases):
-    - Android (Capacitor based)
-    - Windows (Tauri based, uses Edge backed)
-* Most complete implementation of [NIIMBOT protocol](https://printers.niim.blue/interfacing/proto/).
-
-You can see more complete list of implemented and planned features [on the Wiki](https://github.com/MultiMote/niimblue/wiki#features).
-
-Demonstration video:
-
-[![demo video](https://img.youtube.com/vi/u8QX-5e3W_A/mqdefault.jpg)](https://www.youtube.com/watch?v=u8QX-5e3W_A)
+- Connect to a Niimbot printer over serial and read live status: model, battery, paper and ribbon RFID, density range, printhead width.
+- Design labels in a canvas editor: text, shapes, images, QR codes, barcodes, ArUco markers. Snapping, guides, zoom, layers, alignment, undo and redo.
+- Save labels as files on disk and browse them in an in-app library, with thumbnails.
+- Print with a preview that shows the post-processed output. Set density, speed, quantity, label type, print task and offset, then watch progress and cancel if needed.
+- Batch printing from CSV data, with per-row preview and serial numbering.
+- Printer tools: read and write RFID, toggle sound, set auto-shutdown, factory reset, flash firmware, and watch a raw packet log.
+- Paper stock templates keyed to the rolls Niimbot actually sells, grouped by printer family and paper type. The connected printer's reported paper types and printhead width filter the list to what it can actually print, and continuous rolls take a user-settable length.
 
 ## Supported printers
 
-There is no exact list of supported models in this project. This project aims to support the maximum number of models.
+There is no fixed list. The aim is to support as many models as the protocol allows. Tested models are tracked in the [NiimBlueLib issue tracker](https://github.com/MultiMote/niimbluelib/issues/1). If your model does not print, capture a packet dump from the official app so the protocol can be checked.
 
-You can check [a list of tested models here](https://github.com/MultiMote/niimbluelib/issues/1). If you own other model, please write a comment.
+## Requirements
 
-If your (new) printer model does not print, please make a [packet dump](https://github.com/MultiMote/niimblue/wiki/Making-packet-capture) of print with official application.
+- Windows 10 or 11.
+- A serial connection to the printer (USB, or Bluetooth mapped to a COM port).
+- Node.js 20+ if you build from source.
 
-> [!NOTE]
-> If you have printing problems, try different print task versions in print preview dialog. Make if default by pressing "Lock" button.
+## Building from source
 
-
-## Supported browsers
-
-Your browser must support Web Bluetooth API: [supported browsers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API#browser_compatibility).
-
-For serial communication: [supported browsers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API#browser_compatibility).
-
-Modern Chrome-based browsers should usually work.
-
-In some systems you need to enable Chrome `Web Bluetooth` or `Experimental Web Platform Features` (navigate to `chrome://flags`).
-
-## Images
-
-Images may be outdated.
-
-![ui](about/ui.png)
-
-<details>
-<summary>⬇ More images ⬇</summary>
-
-Label properties:
-
-![labels](about/labels.png)
-
-Save/load menu:
-
-![save_load](about/save_load.png)
-
-Print preview dialog:
-
-![print_preview](about/print_preview.png)
-
-Post-processing:
-
-![dither](about/dither.png)
-
-Templating:
-
-![templating](about/templating.png)
-
-Dynamic data:
-
-![batch](about/batch.png)
-
-In real life:
-
-![printed_b1](about/printed_b1.jpg)
-
-![printed_d110](about/printed_d110.jpg)
-</details>
-
-
-## Development
-
-### Launching development server
-
-Skip steps you have done.
-
-1. Install [git](https://git-scm.com)
-
-2. Install [nodejs](https://nodejs.org)
-
-3. Clone repository
-
-    ```bash
-    git clone https://github.com/MultiMote/niimblue.git
-    ```
-
-4. Install dependencies
-
-    ```bash
-    npm i
-    ```
-
-5. Run dev server
-
-    Check code and run:
-
-    ```bash
-    npm run dev-check
-    ```
-
-    Or just run:
-
-    ```bash
-    npm run dev
-    ```
-
-### Deployment
-
-Here are some options. HTTPS is required for non-localhost deployments.
-
-#### Serving static files
-
-To get static files run `npm run build` (result builds to `dist`) or download `niimblue-dist.zip` from [Releases](https://github.com/MultiMote/niimblue/releases).
-
-#### Using Docker Image
-
-Follow the instructions in the [wiki](https://github.com/MultiMote/niimblue/wiki/Running-own-instance-with-Docker).
-
-### IDE setup
-
-Project uses path aliases.
-
-VSCode (settings.json):
-
-```json
-{
-  "typescript.preferences.importModuleSpecifier": "non-relative",
-  "javascript.preferences.importModuleSpecifier": "non-relative"
-}
+```bash
+npm install
+npm run dev        # dev server with hot reload
+npm run package    # builds a Windows installer under release/
 ```
 
-## Translations (click to contribute)
+For just the renderer, run `npm run build:renderer`. For the Electron main process, run `npm run build:main`.
 
-[![translation](https://weblate.mmote.ru/widget/niimblue/web/multi-auto.svg)](https://weblate.mmote.ru/engage/niimblue/)
+## Project layout
+
+- `electron/` - main process, preload, file IPC for the label library.
+- `src/renderer/` - the Svelte app: editor engine, components, comms and print logic.
+- `src/renderer/lib/engine/` - the canvas scene graph, renderers and hit testing.
+- `src/renderer/lib/paper.ts` - paper stock templates.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the style rules the code follows.
+
+## Credits
+
+Built on [NiimBlueLib](https://github.com/MultiMote/niimbluelib) by MultiMote, which does the actual work of talking to the printers. The original [niimblue](https://github.com/MultiMote/niimblue) web app is the starting point for this project.

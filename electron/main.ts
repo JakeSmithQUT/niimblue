@@ -11,7 +11,7 @@ const createWindow = () => {
     minWidth: 960,
     minHeight: 600,
     backgroundColor: "#0b0d10",
-    title: "Niimblue Studio",
+    title: "Niimbot Unlocked",
     webPreferences: {
       preload: join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -138,7 +138,7 @@ const ensureLibraryDir = () => {
   return dir;
 };
 
-const LABEL_FILTERS = [{ name: "Niimblue label", extensions: ["nbl"] }];
+const LABEL_FILTERS = [{ name: "Niimbot Unlocked label", extensions: ["nbl"] }];
 
 ipcMain.handle("label:open", async () => {
   const win = BrowserWindow.getFocusedWindow();

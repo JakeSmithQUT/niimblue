@@ -1,31 +1,22 @@
 ---
 name: Bug report
-about: Generic bug report
+about: Report a problem with Niimbot Unlocked
 title: ''
 labels: bug
 assignees: ''
-
 ---
 
-### Printer info
+### Printer
 
-<details>
-<summary>info from niimbue</summary>
+Model, and how it is connected (USB serial, or Bluetooth mapped to a COM port).
 
-```
-*contents of "gear" menu near printer connector*
-```
-</details>
+### Printer status
 
-*if you can't connect, just write your model here*
+If you can connect, open the Tools view and copy the status block (model, battery, paper, RFID). If you can't connect, just write the model.
 
-### Transport
-? Bluetooth (what adapter are you using?)
-? Serial (USB)
+### Logs
 
-### Browser console logs
-
-*press F12 and copy "Console" tab contents*
+Open View -> Toggle DevTools (or Ctrl+Shift+I), copy the Console tab contents.
 
 <details>
 <summary>logs</summary>
@@ -33,10 +24,19 @@ assignees: ''
 ```
 *paste logs here*
 ```
+
 </details>
 
 ### Label
-*export your label and attach it here (drag and drop)*
 
-### Description
-*describe your issue here*
+If the bug involves a specific label, attach the `.nbl` file (drag and drop).
+
+### Steps to reproduce
+
+1.
+2.
+3.
+
+### What happened
+
+Describe the problem and what you expected instead.
