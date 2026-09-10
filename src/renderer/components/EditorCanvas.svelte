@@ -89,12 +89,30 @@
 
     const snapshot = nodes;
     const selId = selectedId;
+    const direction = $labelProps.printDirection;
     const token = ++renderToken;
     renderScene(c, snapshot, imageCache).then(() => {
       if (token !== renderToken) return;
+      drawFeedIndicator(c, direction, width, height);
       drawSelection(c, snapshot, selId);
       c.restore();
     });
+  };
+
+  const drawFeedIndicator = (c: CanvasRenderingContext2D, direction: "left" | "top", w: number, h: number) => {
+    c.save();
+    c.strokeStyle = "#ff5349";
+    c.lineWidth = 2 / zoom;
+    c.beginPath();
+    if (direction === "left") {
+      c.moveTo(0, 0);
+      c.lineTo(0, h);
+    } else {
+      c.moveTo(0, 0);
+      c.lineTo(w, 0);
+    }
+    c.stroke();
+    c.restore();
   };
 
   const drawSelection = (c: CanvasRenderingContext2D, snapshot: SceneNode[], selId: string | undefined) => {
@@ -102,18 +120,21 @@
     const node = snapshot.find((n) => n.id === selId);
     if (!node) return;
     c.save();
+    c.translate(node.x + node.width / 2, node.y + node.height / 2);
+    if (node.rotation) c.rotate((node.rotation * Math.PI) / 180);
+    c.translate(-node.width / 2, -node.height / 2);
     c.strokeStyle = "#3b82f6";
     c.lineWidth = 1 / zoom;
     c.setLineDash([4 / zoom, 4 / zoom]);
-    c.strokeRect(node.x, node.y, node.width, node.height);
+    c.strokeRect(0, 0, node.width, node.height);
     c.setLineDash([]);
     if (node.kind !== "line") {
       const h = 6 / zoom;
       const handles: [number, number][] = [
-        [node.x, node.y],
-        [node.x + node.width, node.y],
-        [node.x, node.y + node.height],
-        [node.x + node.width, node.y + node.height],
+        [0, 0],
+        [node.width, 0],
+        [0, node.height],
+        [node.width, node.height],
       ];
       c.fillStyle = "#fff";
       c.strokeStyle = "#3b82f6";
@@ -357,11 +378,12 @@
       {/each}
     </select>
     {#if connected}
-      <span class="text-success">filtered to connected printer</span>
+      <span class="text-success">filtered to {$printerMeta?.model ?? "printer"}</span>
     {:else}
       <span>connect a printer to filter</span>
     {/if}
-    <span class="ml-1">{$labelProps.size.width} x {$labelProps.size.height} px</span>
+    <span class="ml-1">{$labelProps.size.width} × {$labelProps.size.height} px</span>
+    <span class="ml-1 text-muted/70">feed: {$labelProps.printDirection}</span>
   </div>
 
   <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-surface-1 p-8">

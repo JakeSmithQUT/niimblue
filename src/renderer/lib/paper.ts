@@ -613,5 +613,6 @@ export const filterTemplatesForPrinter = (
   meta: PrinterModelMeta | undefined,
 ): PaperTemplate[] => {
   if (!meta) return templates;
-  return templates.filter((t) => paperFitsPrinter(t, meta));
+  const filtered = templates.filter((t) => paperFitsPrinter(t, meta));
+  return filtered.length > 0 ? filtered : templates;
 };
