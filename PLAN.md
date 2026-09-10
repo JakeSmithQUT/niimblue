@@ -1,4 +1,4 @@
-# Niimblue → Electron label studio (Windows)
+# Niimbot Unlocked -> Electron label studio (Windows)
 
 Goal: turn this fork into a standalone Electron app for Windows that keeps the niimbot serial comms and print pipeline from the original, with a new editor engine and a modern, customisable UI.
 

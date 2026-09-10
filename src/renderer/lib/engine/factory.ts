@@ -64,7 +64,7 @@ export const createImage = (src: string, w: number, h: number): ImageNode => ({
   src,
 });
 
-export const createQr = (text = "https://niim.blue"): QrNode => ({
+export const createQr = (text = "https://github.com/JakeSmithQUT/niimblue"): QrNode => ({
   ...base("qrcode", 80, 80, "QR code"),
   text,
   ecc: "M",
