@@ -7,6 +7,7 @@
   import PropertiesPanel from "./components/PropertiesPanel.svelte";
   import LayersPanel from "./components/LayersPanel.svelte";
   import LibraryView from "./components/LibraryView.svelte";
+  import PrinterTools from "./components/PrinterTools.svelte";
   import PrintDialog from "./components/PrintDialog.svelte";
 
   let printOpen = $state(false);
@@ -23,6 +24,8 @@
         <EditorCanvas onPrint={() => (printOpen = true)} />
       {:else if $activeView === "library"}
         <LibraryView />
+      {:else if $activeView === "tools"}
+        <PrinterTools />
       {:else}
         <div class="flex h-full items-center justify-center text-muted">
           Settings land in phase 7.

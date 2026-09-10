@@ -6,6 +6,7 @@
   const items: Item[] = [
     { id: "design", label: "Design", icon: "edit_note" },
     { id: "library", label: "Library", icon: "folder" },
+    { id: "tools", label: "Tools", icon: "build" },
     { id: "settings", label: "Settings", icon: "settings" },
   ];
 </script>
