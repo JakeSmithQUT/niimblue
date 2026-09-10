@@ -25,13 +25,16 @@ export const setLabelSize = (t: {
   printDirection: PrintDirection;
   continuous?: boolean;
 }) => {
-  labelProps.update((p) => ({
-    ...p,
-    dpmm: t.dpmm,
-    printDirection: t.printDirection,
-    size: {
-      width: mmToPx(t.widthMm, t.dpmm),
-      height: t.continuous ? p.size.height : mmToPx(t.heightMm ?? 30, t.dpmm),
-    },
-  }));
+  labelProps.update((p) => {
+    const headPx = mmToPx(t.widthMm, t.dpmm);
+    const lenPx = t.continuous ? p.size.height : mmToPx(t.heightMm ?? 30, t.dpmm);
+    const width = t.printDirection === "left" ? lenPx : headPx;
+    const height = t.printDirection === "left" ? headPx : lenPx;
+    return {
+      ...p,
+      dpmm: t.dpmm,
+      printDirection: t.printDirection,
+      size: { width, height },
+    };
+  });
 };

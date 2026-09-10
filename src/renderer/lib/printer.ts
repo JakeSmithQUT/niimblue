@@ -94,6 +94,8 @@ export const connect = async () => {
   connectionState.set("connecting");
   try {
     await client.connect();
+    await client.fetchPrinterInfo();
+    client.startHeartbeat();
   } catch (e) {
     connectionState.set("disconnected");
     toast(`${e}`, "error");

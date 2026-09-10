@@ -88,26 +88,45 @@ export const resizeNode = (id: string, handle: "nw" | "ne" | "sw" | "se", x: num
     ...st,
     nodes: st.nodes.map((n) => {
       if (n.id !== id) return n;
-      let { x: nx, y: ny, width: w, height: h } = n;
+      const angle = (-n.rotation * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const cx = n.x + n.width / 2;
+      const cy = n.y + n.height / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      const lx = dx * cos - dy * sin + n.width / 2;
+      const ly = dx * sin + dy * cos + n.height / 2;
+
+      let nx = 0;
+      let ny = 0;
+      let w = n.width;
+      let h = n.height;
+
       if (handle === "nw" || handle === "sw") {
-        const right = nx + w;
-        nx = Math.min(x, right - 1);
+        const right = n.width;
+        nx = Math.min(lx, right - 1);
         w = right - nx;
       } else {
-        const left = nx;
-        const maxW = Math.max(1, x - left);
-        w = maxW;
+        const left = 0;
+        w = Math.max(1, lx - left);
+        nx = 0;
       }
       if (handle === "nw" || handle === "ne") {
-        const bottom = ny + h;
-        ny = Math.min(y, bottom - 1);
+        const bottom = n.height;
+        ny = Math.min(ly, bottom - 1);
         h = bottom - ny;
       } else {
-        const top = ny;
-        const maxH = Math.max(1, y - top);
-        h = maxH;
+        const top = 0;
+        h = Math.max(1, ly - top);
+        ny = 0;
       }
-      return { ...n, x: nx, y: ny, width: w, height: h } as SceneNode;
+
+      const newCx = cx + (nx + w / 2) - n.width / 2;
+      const newCy = cy + (ny + h / 2) - n.height / 2;
+      const fx = newCx - w / 2;
+      const fy = newCy - h / 2;
+      return { ...n, x: fx, y: fy, width: w, height: h } as SceneNode;
     }),
   }));
 };
