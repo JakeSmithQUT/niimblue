@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { NodeKind } from "$lib/engine/types";
   import { kindLabel } from "$lib/engine/types";
+  import { saveCurrentLabel, openLabelFile } from "$lib/library";
+  import { toast } from "$lib/toast";
 
   let {
     onadd,
@@ -16,6 +18,17 @@
     onZoomFit: () => void;
   } = $props();
 
+  const onSave = async () => {
+    const name = prompt("Label name", "Untitled");
+    if (!name) return;
+    await saveCurrentLabel(name);
+    toast(`Saved ${name}`, "success");
+  };
+
+  const onOpen = async () => {
+    await openLabelFile();
+  };
+
   const tools: { kind: NodeKind; icon: string }[] = [
     { kind: "text", icon: "title" },
     { kind: "rect", icon: "rectangle" },
@@ -30,6 +43,15 @@
 <div
   class="flex shrink-0 items-center gap-1 border-b border-border bg-surface-1 px-3 py-1.5"
 >
+  <button class="file-btn" onclick={onOpen} title="Open">
+    <span class="material-symbols-rounded text-[20px]">folder_open</span>
+  </button>
+  <button class="file-btn" onclick={onSave} title="Save">
+    <span class="material-symbols-rounded text-[20px]">save</span>
+  </button>
+
+  <div class="mx-1 h-6 w-px bg-border"></div>
+
   {#each tools as t (t.kind)}
     <button
       class="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-white"
@@ -66,6 +88,20 @@
     cursor: pointer;
   }
   .zoom-btn:hover {
+    background: var(--color-surface-2);
+    color: #fff;
+  }
+  .file-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 32px;
+    border-radius: 6px;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+  .file-btn:hover {
     background: var(--color-surface-2);
     color: #fff;
   }

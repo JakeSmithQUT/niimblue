@@ -16,7 +16,7 @@
   let nodes = $state<SceneNode[]>([]);
 
   const imageCache = new Map<string, HTMLImageElement>();
-  let dragging = false;
+  let dragging = $state(false);
   let dragNode: SceneNode | undefined;
   let dragOffset = { x: 0, y: 0 };
   let raf = 0;
