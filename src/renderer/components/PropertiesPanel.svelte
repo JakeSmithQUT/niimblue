@@ -1,7 +1,7 @@
 <script lang="ts">
   import { scene, updateNode, beginMutation, removeSelected, duplicateSelected, bringToFront, sendToBack } from "$lib/engine/scene";
   import { kindLabel } from "$lib/engine/types";
-  import type { SceneNode, TextNode, RectNode, EllipseNode, LineNode } from "$lib/engine/types";
+  import type { SceneNode, TextNode, RectNode, EllipseNode, LineNode, QrNode, BarcodeNode, ArUcoNode } from "$lib/engine/types";
 
   let selected = $state<SceneNode | undefined>(undefined);
 
@@ -26,6 +26,9 @@
   const asRect = (n: SceneNode) => n as RectNode;
   const asEllipse = (n: SceneNode) => n as EllipseNode;
   const asLine = (n: SceneNode) => n as LineNode;
+  const asQr = (n: SceneNode) => n as QrNode;
+  const asBarcode = (n: SceneNode) => n as BarcodeNode;
+  const asArUco = (n: SceneNode) => n as ArUcoNode;
 </script>
 
 <div class="flex h-full w-64 shrink-0 flex-col border-l border-border bg-surface-0">
@@ -113,6 +116,51 @@
         <label class="mb-3 block">
           <span class="prop-label">Stroke width</span>
           <input class="prop-input" type="number" value={asLine(selected).strokeWidth} oninput={(e) => onInput({ strokeWidth: num(e.currentTarget.value) } as Partial<SceneNode>)} />
+        </label>
+      {/if}
+
+      {#if selected.kind === "qrcode"}
+        <label class="mb-3 block">
+          <span class="prop-label">Text</span>
+          <textarea class="prop-input" rows="2" value={asQr(selected).text} oninput={(e) => onInput({ text: e.currentTarget.value } as Partial<SceneNode>)}></textarea>
+        </label>
+        <label class="mb-3 block">
+          <span class="prop-label">Error correction</span>
+          <select class="prop-input" value={asQr(selected).ecc} onchange={(e) => onInput({ ecc: e.currentTarget.value as "L" | "M" | "Q" | "H" } as Partial<SceneNode>)}>
+            <option value="L">L (7%)</option>
+            <option value="M">M (15%)</option>
+            <option value="Q">Q (25%)</option>
+            <option value="H">H (30%)</option>
+          </select>
+        </label>
+      {/if}
+
+      {#if selected.kind === "barcode"}
+        <label class="mb-3 block">
+          <span class="prop-label">Text</span>
+          <input class="prop-input" value={asBarcode(selected).text} oninput={(e) => onInput({ text: e.currentTarget.value } as Partial<SceneNode>)} />
+        </label>
+        <label class="mb-3 block">
+          <span class="prop-label">Encoding</span>
+          <select class="prop-input" value={asBarcode(selected).encoding} onchange={(e) => onInput({ encoding: e.currentTarget.value } as Partial<SceneNode>)}>
+            <option value="CODE128">CODE128B</option>
+            <option value="EAN13">EAN13</option>
+          </select>
+        </label>
+      {/if}
+
+      {#if selected.kind === "aruco"}
+        <label class="mb-3 block">
+          <span class="prop-label">Dictionary</span>
+          <select class="prop-input" value={String(asArUco(selected).size)} onchange={(e) => onInput({ size: num(e.currentTarget.value) } as Partial<SceneNode>)}>
+            <option value="4">4x4 (50)</option>
+            <option value="5">5x5 (50)</option>
+            <option value="6">6x6 (50)</option>
+          </select>
+        </label>
+        <label class="mb-3 block">
+          <span class="prop-label">Marker id</span>
+          <input class="prop-input" type="number" min="0" max="49" value={asArUco(selected).markerId} oninput={(e) => onInput({ markerId: num(e.currentTarget.value) } as Partial<SceneNode>)} />
         </label>
       {/if}
     </div>
