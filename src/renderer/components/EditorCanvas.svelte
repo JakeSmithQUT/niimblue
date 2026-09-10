@@ -9,6 +9,8 @@
   import { setLabelSize } from "$lib/label";
   import { PAPER_TEMPLATES } from "$lib/paper";
 
+  let { onPrint }: { onPrint: () => void } = $props();
+
   let canvasEl = $state<HTMLCanvasElement>();
   let ctx = $state<CanvasRenderingContext2D | null>(null);
   let zoom = $state(2);
@@ -169,7 +171,7 @@
 <svelte:window onkeydown={onKeyDown} />
 
 <div class="flex h-full flex-col">
-  <Toolbar onadd={addNode} {zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onZoomFit={zoomFit} />
+  <Toolbar onadd={addNode} onPrint={onPrint} {zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onZoomFit={zoomFit} />
 
   <div class="flex shrink-0 items-center gap-2 border-b border-border bg-surface-0 px-3 py-1 text-xs text-muted">
     <span>Paper</span>

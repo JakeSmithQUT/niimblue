@@ -6,12 +6,14 @@
 
   let {
     onadd,
+    onPrint,
     zoom,
     onZoomIn,
     onZoomOut,
     onZoomFit,
   }: {
     onadd: (kind: NodeKind) => void;
+    onPrint: () => void;
     zoom: number;
     onZoomIn: () => void;
     onZoomOut: () => void;
@@ -48,6 +50,9 @@
   </button>
   <button class="file-btn" onclick={onSave} title="Save">
     <span class="material-symbols-rounded text-[20px]">save</span>
+  </button>
+  <button class="print-btn" onclick={onPrint} title="Print">
+    <span class="material-symbols-rounded text-[20px]">print</span>
   </button>
 
   <div class="mx-1 h-6 w-px bg-border"></div>
@@ -103,6 +108,20 @@
   }
   .file-btn:hover {
     background: var(--color-surface-2);
+    color: #fff;
+  }
+  .print-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 32px;
+    border-radius: 6px;
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+  .print-btn:hover {
+    background: var(--color-accent);
     color: #fff;
   }
 </style>
