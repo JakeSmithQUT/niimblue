@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { labelProps } from "$lib/label";
-  import { scene, addNode, addExistingNode, selectNode, moveNode, beginMutation, removeSelected, duplicateSelected, undo, redo } from "$lib/engine/scene";
+  import { scene, addNode, addExistingNode, selectNode, moveNode, resizeNode, updateNode, beginMutation, removeSelected, duplicateSelected, undo, redo } from "$lib/engine/scene";
   import { createImage } from "$lib/engine/factory";
   import { renderScene } from "$lib/engine/render";
-  import { topNodeAt } from "$lib/engine/geometry";
-  import type { SceneNode } from "$lib/engine/types";
+  import { topNodeAt, handleAt, type HandleId } from "$lib/engine/geometry";
+  import type { SceneNode, TextNode } from "$lib/engine/types";
   import Toolbar from "./Toolbar.svelte";
   import { setLabelSize } from "$lib/label";
   import { PAPER_TEMPLATES } from "$lib/paper";
@@ -44,6 +44,13 @@
   let dragging = $state(false);
   let dragNode: SceneNode | undefined;
   let dragOffset = { x: 0, y: 0 };
+  let resizing = $state(false);
+  let resizeHandle: HandleId | undefined;
+  let resizeTarget: SceneNode | undefined;
+  let editingId = $state<string | undefined>(undefined);
+  let editValue = $state("");
+  let textareaEl = $state<HTMLTextAreaElement>();
+  let cursor = $state("default");
   let raf = 0;
 
   const scheduleRender = () => {
@@ -88,16 +95,18 @@
     c.setLineDash([4 / zoom, 4 / zoom]);
     c.strokeRect(node.x, node.y, node.width, node.height);
     c.setLineDash([]);
-    const h = 5 / zoom;
-    const handles = [
-      [node.x, node.y],
-      [node.x + node.width, node.y],
-      [node.x, node.y + node.height],
-      [node.x + node.width, node.y + node.height],
-    ];
-    c.fillStyle = "#3b82f6";
-    for (const [hx, hy] of handles) {
-      c.fillRect(hx - h, hy - h, h * 2, h * 2);
+    if (node.kind !== "line") {
+      const h = 5 / zoom;
+      const handles: [number, number][] = [
+        [node.x, node.y],
+        [node.x + node.width, node.y],
+        [node.x, node.y + node.height],
+        [node.x + node.width, node.y + node.height],
+      ];
+      c.fillStyle = "#3b82f6";
+      for (const [hx, hy] of handles) {
+        c.fillRect(hx - h, hy - h, h * 2, h * 2);
+      }
     }
     c.restore();
   };
@@ -109,8 +118,26 @@
     return { x, y };
   };
 
+  const cursorFor = (handle: HandleId | undefined, over: boolean): string => {
+    if (handle === "nw" || handle === "se") return "nwse-resize";
+    if (handle === "ne" || handle === "sw") return "nesw-resize";
+    return over ? "move" : "default";
+  };
+
   const onDown = (e: MouseEvent) => {
+    if (editingId) return;
     const { x, y } = toSceneCoords(e);
+    const selected = nodes.find((n) => n.id === selectedId);
+    if (selected) {
+      const handle = handleAt(selected, x, y, zoom);
+      if (handle) {
+        beginMutation();
+        resizing = true;
+        resizeHandle = handle;
+        resizeTarget = selected;
+        return;
+      }
+    }
     const hit = topNodeAt(nodes, x, y);
     if (hit) {
       selectNode(hit.id);
@@ -124,7 +151,23 @@
   };
 
   const onMove = (e: MouseEvent) => {
-    if (!dragging || !dragNode) return;
+    if (resizing && resizeTarget && resizeHandle) {
+      const { x, y } = toSceneCoords(e);
+      resizeNode(resizeTarget.id, resizeHandle, x, y);
+      scheduleRender();
+      return;
+    }
+    if (!dragging || !dragNode) {
+      const { x, y } = toSceneCoords(e);
+      const selected = nodes.find((n) => n.id === selectedId);
+      if (selected) {
+        const handle = handleAt(selected, x, y, zoom);
+        cursor = cursorFor(handle, !!topNodeAt(nodes, x, y));
+      } else {
+        cursor = topNodeAt(nodes, x, y) ? "move" : "default";
+      }
+      return;
+    }
     const { x, y } = toSceneCoords(e);
     moveNode(dragNode.id, x - dragOffset.x, y - dragOffset.y);
     scheduleRender();
@@ -132,7 +175,41 @@
 
   const onUp = () => {
     dragging = false;
+    resizing = false;
     dragNode = undefined;
+    resizeTarget = undefined;
+    resizeHandle = undefined;
+  };
+
+  const onDoubleClick = (e: MouseEvent) => {
+    const { x, y } = toSceneCoords(e);
+    const hit = topNodeAt(nodes, x, y);
+    if (hit && hit.kind === "text") {
+      const t = hit as TextNode;
+      editingId = hit.id;
+      editValue = t.text;
+      selectNode(hit.id);
+    }
+  };
+
+  $effect(() => {
+    if (editingId && textareaEl) {
+      textareaEl.focus();
+      textareaEl.select();
+    }
+  });
+
+  const commitEdit = () => {
+    if (editingId) {
+      updateNode(editingId, { text: editValue } as Partial<SceneNode>);
+    }
+    editingId = undefined;
+    editValue = "";
+  };
+
+  const cancelEdit = () => {
+    editingId = undefined;
+    editValue = "";
   };
 
   onMount(() => {
@@ -178,6 +255,7 @@
       if (e.shiftKey) redo();
       else undo();
     } else if (e.key === "Escape") {
+      if (editingId) return;
       if (inField) return;
       selectNode(undefined);
     } else if (!inField && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
@@ -239,9 +317,34 @@
       onmousemove={onMove}
       onmouseup={onUp}
       onmouseleave={onUp}
+      ondblclick={onDoubleClick}
       onwheel={onWheel}
       class="shadow-2xl"
-      style="image-rendering: pixelated; cursor: {dragging ? 'grabbing' : 'default'};"
+      style="image-rendering: pixelated; cursor: {cursor};"
     ></canvas>
   </div>
 </div>
+
+{#if editingId}
+  {@const t = nodes.find((n) => n.id === editingId) as TextNode | undefined}
+  {#if t && canvasEl}
+    {@const rect = canvasEl.getBoundingClientRect()}
+    <textarea
+      bind:this={textareaEl}
+      class="fixed z-50 m-0 rounded border-2 border-blue-500 bg-white p-0 text-black outline-none resize-none"
+      style={`left: ${rect.left + t.x * zoom}px; top: ${rect.top + t.y * zoom}px; width: ${t.width * zoom}px; min-height: ${t.fontSize * t.lineHeight * zoom}px; font-size: ${t.fontSize * zoom}px; font-family: ${t.fontFamily}; font-weight: ${t.fontWeight}; line-height: ${t.lineHeight}; text-align: ${t.align};`}
+      value={editValue}
+      oninput={(e) => (editValue = e.currentTarget.value)}
+      onblur={commitEdit}
+      onkeydown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          (e.currentTarget as HTMLTextAreaElement).blur();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          cancelEdit();
+        }
+      }}
+    ></textarea>
+  {/if}
+{/if}

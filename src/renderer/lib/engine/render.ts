@@ -22,15 +22,33 @@ const applyTransform = (ctx: CanvasRenderingContext2D, node: SceneNode) => {
   ctx.translate(-node.width / 2, -node.height / 2);
 };
 
+const wrapLine = (ctx: CanvasRenderingContext2D, line: string, maxWidth: number): string[] => {
+  if (line.length === 0) return [""];
+  const words = line.split(" ");
+  const out: string[] = [];
+  let current = words[0] ?? "";
+  for (let i = 1; i < words.length; i++) {
+    const candidate = `${current} ${words[i]}`;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      current = candidate;
+    } else {
+      out.push(current);
+      current = words[i];
+    }
+  }
+  out.push(current);
+  return out;
+};
+
 const drawText = (ctx: CanvasRenderingContext2D, node: Extract<SceneNode, { kind: "text" }>) => {
   ctx.fillStyle = node.fill;
   ctx.font = `${node.italic ? "italic " : ""}${node.fontWeight} ${node.fontSize}px ${node.fontFamily}`;
   ctx.textBaseline = "top";
   ctx.textAlign = node.align;
   const lineHeight = node.fontSize * node.lineHeight;
-  const lines = node.text.split("\n");
+  const wrapped = node.text.split("\n").flatMap((line) => wrapLine(ctx, line, node.width));
   const x = node.align === "center" ? node.width / 2 : node.align === "right" ? node.width : 0;
-  lines.forEach((line, i) => ctx.fillText(line, x, i * lineHeight));
+  wrapped.forEach((line, i) => ctx.fillText(line, x, i * lineHeight));
 };
 
 const drawRect = (ctx: CanvasRenderingContext2D, node: Extract<SceneNode, { kind: "rect" }>) => {
