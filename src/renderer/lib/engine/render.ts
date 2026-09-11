@@ -2,6 +2,7 @@ import type { SceneNode } from "./types";
 import { drawQrCode } from "../image/qr";
 import { drawBarcode, type BarcodeCoding } from "../image/barcode";
 import { drawArUco, type ArUcoDictionary } from "../image/aruco";
+import { getImage } from "../image/loader";
 
 const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
   const radius = Math.min(r, w / 2, h / 2);
@@ -89,7 +90,20 @@ const drawLine = (ctx: CanvasRenderingContext2D, node: Extract<SceneNode, { kind
   ctx.stroke();
 };
 
-const drawImage = async (ctx: CanvasRenderingContext2D, node: Extract<SceneNode, { kind: "image" }>, cache: Map<string, HTMLImageElement>) => {
+const drawImageSync = (ctx: CanvasRenderingContext2D, node: Extract<SceneNode, { kind: "image" }>) => {
+  const entry = getImage(node.src);
+  if (!entry || !entry.loaded) {
+    ctx.fillStyle = "#e5e7eb";
+    ctx.fillRect(0, 0, node.width, node.height);
+    ctx.strokeStyle = "#9ca3af";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, 0, node.width, node.height);
+    return;
+  }
+  ctx.drawImage(entry.img, 0, 0, node.width, node.height);
+};
+
+const drawImageAsync = async (ctx: CanvasRenderingContext2D, node: Extract<SceneNode, { kind: "image" }>, cache: Map<string, HTMLImageElement>) => {
   let img = cache.get(node.src);
   if (!img) {
     img = new Image();
@@ -103,14 +117,7 @@ const drawImage = async (ctx: CanvasRenderingContext2D, node: Extract<SceneNode,
   ctx.drawImage(img, 0, 0, node.width, node.height);
 };
 
-export const renderNode = async (
-  ctx: CanvasRenderingContext2D,
-  node: SceneNode,
-  imageCache: Map<string, HTMLImageElement>,
-): Promise<void> => {
-  if (!node.visible) return;
-  ctx.save();
-  applyTransform(ctx, node);
+const drawBodySync = (ctx: CanvasRenderingContext2D, node: SceneNode) => {
   switch (node.kind) {
     case "text":
       drawText(ctx, node);
@@ -125,7 +132,7 @@ export const renderNode = async (
       drawLine(ctx, node);
       break;
     case "image":
-      await drawImage(ctx, node, imageCache);
+      drawImageSync(ctx, node);
       break;
     case "qrcode":
       drawQrCode(ctx, node.width, node.height, node.text, node.ecc);
@@ -149,15 +156,50 @@ export const renderNode = async (
       break;
     }
   }
+};
+
+const drawBodyAsync = async (ctx: CanvasRenderingContext2D, node: SceneNode, imageCache: Map<string, HTMLImageElement>) => {
+  switch (node.kind) {
+    case "image":
+      await drawImageAsync(ctx, node, imageCache);
+      break;
+    default:
+      drawBodySync(ctx, node);
+  }
+};
+
+export const renderNode = (ctx: CanvasRenderingContext2D, node: SceneNode): void => {
+  if (!node.visible) return;
+  ctx.save();
+  applyTransform(ctx, node);
+  drawBodySync(ctx, node);
   ctx.restore();
 };
 
-export const renderScene = async (
+export const renderScene = (ctx: CanvasRenderingContext2D, nodes: SceneNode[]): void => {
+  for (const node of nodes) {
+    renderNode(ctx, node);
+  }
+};
+
+export const renderNodeAsync = async (
+  ctx: CanvasRenderingContext2D,
+  node: SceneNode,
+  imageCache: Map<string, HTMLImageElement>,
+): Promise<void> => {
+  if (!node.visible) return;
+  ctx.save();
+  applyTransform(ctx, node);
+  await drawBodyAsync(ctx, node, imageCache);
+  ctx.restore();
+};
+
+export const renderSceneAsync = async (
   ctx: CanvasRenderingContext2D,
   nodes: SceneNode[],
   imageCache: Map<string, HTMLImageElement>,
 ): Promise<void> => {
   for (const node of nodes) {
-    await renderNode(ctx, node, imageCache);
+    await renderNodeAsync(ctx, node, imageCache);
   }
 };

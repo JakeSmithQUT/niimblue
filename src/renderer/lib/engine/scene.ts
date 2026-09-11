@@ -88,45 +88,45 @@ export const resizeNode = (id: string, handle: "nw" | "ne" | "sw" | "se", x: num
     ...st,
     nodes: st.nodes.map((n) => {
       if (n.id !== id) return n;
+      const cx = n.x + n.width / 2;
+      const cy = n.y + n.height / 2;
       const angle = (-n.rotation * Math.PI) / 180;
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
-      const cx = n.x + n.width / 2;
-      const cy = n.y + n.height / 2;
       const dx = x - cx;
       const dy = y - cy;
       const lx = dx * cos - dy * sin + n.width / 2;
       const ly = dx * sin + dy * cos + n.height / 2;
 
-      let nx = 0;
-      let ny = 0;
+      let left = 0;
+      let top = 0;
       let w = n.width;
       let h = n.height;
 
       if (handle === "nw" || handle === "sw") {
-        const right = n.width;
-        nx = Math.min(lx, right - 1);
-        w = right - nx;
+        left = Math.min(lx, n.width - 1);
+        w = n.width - left;
       } else {
-        const left = 0;
-        w = Math.max(1, lx - left);
-        nx = 0;
+        w = Math.max(1, lx);
       }
       if (handle === "nw" || handle === "ne") {
-        const bottom = n.height;
-        ny = Math.min(ly, bottom - 1);
-        h = bottom - ny;
+        top = Math.min(ly, n.height - 1);
+        h = n.height - top;
       } else {
-        const top = 0;
-        h = Math.max(1, ly - top);
-        ny = 0;
+        h = Math.max(1, ly);
       }
 
-      const newCx = cx + (nx + w / 2) - n.width / 2;
-      const newCy = cy + (ny + h / 2) - n.height / 2;
-      const fx = newCx - w / 2;
-      const fy = newCy - h / 2;
-      return { ...n, x: fx, y: fy, width: w, height: h } as SceneNode;
+      const localOffsetX = left + w / 2 - n.width / 2;
+      const localOffsetY = top + h / 2 - n.height / 2;
+      const worldOffsetX = localOffsetX * cos + localOffsetY * sin;
+      const worldOffsetY = -localOffsetX * sin + localOffsetY * cos;
+      return {
+        ...n,
+        x: cx + worldOffsetX - w / 2,
+        y: cy + worldOffsetY - h / 2,
+        width: w,
+        height: h,
+      } as SceneNode;
     }),
   }));
 };

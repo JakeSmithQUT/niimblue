@@ -1,4 +1,5 @@
-import { renderScene } from "../engine/render";
+import { renderSceneAsync } from "../engine/render";
+import { preloadImages } from "./loader";
 import type { SceneNode, TextNode } from "../engine/types";
 import type { LabelProps } from "../label";
 
@@ -29,7 +30,8 @@ export const renderLabelToCanvas = async (
     });
   }
 
-  await renderScene(ctx, sceneNodes, imageCache);
+  await preloadImages(sceneNodes);
+  await renderSceneAsync(ctx, sceneNodes, imageCache);
   return { canvas, ctx };
 };
 
